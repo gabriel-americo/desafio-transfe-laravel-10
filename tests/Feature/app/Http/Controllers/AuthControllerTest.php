@@ -15,11 +15,9 @@ class AuthControllerTest extends TestCase
 
     public function testUserShouldNotAuthenticateWithWrongProvider()
     {
-        $user = User::factory()->create();
-
         $payload = [
-            'email' => $user->email,
-            'password' => 'novo123',
+            'email' => 'gabrielamerico90@gmail.com',
+            'password' => 'secret123',
         ];
 
         $request = $this->post(route('authenticate', ['provider' => 'deixa-o-sub']), $payload);
@@ -30,11 +28,9 @@ class AuthControllerTest extends TestCase
 
     public function testUserShouldBeDeniedIfNotRegistered()
     {
-        $user = User::factory()->create();
-
         $payload = [
-            'email' => $user->email,
-            'password' => 'novo123',
+            'email' => 'gabrielamerico90@gmail.com',
+            'password' => 'secret123',
         ];
 
         $request  = $this->post(route('authenticate', ['provider' => 'user']), $payload);
@@ -45,8 +41,6 @@ class AuthControllerTest extends TestCase
     public function testUserShouldSendWrongPassword()
     {
         $user = User::factory()->create();
-
-        dd($user);
 
         $payload = [
             'email' => $user->email,
