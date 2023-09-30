@@ -1,7 +1,10 @@
 <?php
 
-$router->get('/', function () use ($router) {
-    return $router->app->version();
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+
+Route::get('/', function () {
+    return view('welcome');
 });
 
-$router->post('/auth/{provider}', ['as' => 'authenticate', 'uses' => 'AuthController@postAuthenticate']);
+Route::post('/auth/{provider}', [AuthController::class, 'postAuthenticate'])->name('authenticate');

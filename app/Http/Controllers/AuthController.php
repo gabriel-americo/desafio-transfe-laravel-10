@@ -10,12 +10,14 @@ class AuthController extends Controller
 {
     public function postAuthenticate(Request $request, string $provider)
     {
-        $this->validate($request, [
-            'email' => 'required',
-            'password' => 'required'
-        ]);
+        $rules = [
+            'email' => 'required|email',
+            'password' => 'required|min:6',
+        ];
 
-        $providers = ['user', 'retailer'];
+        $this->validate($request, $rules);
+
+        $providers = ['users', 'retailer'];
 
         if (!in_array($provider, $providers)) {
             return response()->json(['errors' => ['main' => 'Wrong provider provided']], 422);
