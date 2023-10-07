@@ -9,29 +9,31 @@ class AuthControllerTest extends TestCase
 {
     public function testUserShouldNotAuthenticateWithWrongProvider()
     {
-        $user = User::factory()->create();
         $payload = [
-            'email' => $user->email,
-            'password' => 'novo123',
+            'email' => 'gabrielamerico90@gmail.com',
+            'password' => 'secret123',
         ];
 
-        $response = $this->post(route('authenticate', ['provider' => 'deixa-o-sub']), $payload);
+        $request = $this->post(route('authenticate', ['provider' => 'errado']), $payload);
 
-        $response->assertStatus(422);
-        $response->assertJson(['errors' => ['main' => 'Wrong provider provided']]);
+        $request
+            ->assertStatus(422)
+            ->assertJson([
+                'errors' => ['main' => 'Wrong provider provided']
+            ]);
     }
 
     public function testUserShouldBeDeniedIfNotRegistered()
     {
-        $user = User::factory()->create();
         $payload = [
-            'email' => $user->email,
-            'password' => 'novo123',
+            'email' => 'teste@exemple.com',
+            'password' => 'secret123',
         ];
 
-        $response  = $this->post(route('authenticate', ['provider' => 'user']), $payload);
-        $response->assertStatus(401);
-        $response->assertJson(['errors' => ['main' => 'Wrong credentials']]);
+        $request = $this->post(route('authenticate', ['provider' => 'user']), $payload);
+        $request
+            ->assertStatus(401)
+            ->assertJson(['errors' => ['main' => 'Wrong credentials']]);
     }
 
     public function testUserShouldSendWrongPassword()
@@ -42,8 +44,24 @@ class AuthControllerTest extends TestCase
             'password' => 'wrongpassword',
         ];
 
-        $request  = $this->post(route('authenticate', ['provider' => 'user']), $payload);
-        $request->assertStatus(401);
-        $request->assertJson(['errors' => ['main' => 'Wrong credentials']]);
+        $request = $this->post(route('authenticate', ['provider' => 'user']), $payload);
+        $request
+            ->assertStatus(401)
+            ->assertJson(['errors' => ['main' => 'Wrong credentials']]);
+    }
+
+    public function testUserCanAuthenticate()
+    {
+        $this->artisan('passport:install');
+        $user = User::factory()->create();
+        $payload = [
+            'email' => $user->email,
+            'password' => 'secret123',
+        ];
+
+        $request = $this->post(route('authenticate', ['provider' => 'user']), $payload);
+        $request
+            ->assertStatus(200)
+            ->assertJsonStructure(['access_token', 'expires_at', 'provider']);
     }
 }

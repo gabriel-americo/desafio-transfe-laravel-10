@@ -2,52 +2,36 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
+
+use App\Repositories\AuthRepository;
+use Illuminate\Auth\AuthenticationException;
+use PHPUnit\Framework\InvalidDataProviderException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function postAuthenticate(Request $request, string $provider)
+    private $repository;
+
+    public function __construct(AuthRepository $repository)
     {
-        $rules = [
-            'email' => 'required|email',
-            'password' => 'required|min:6',
-        ];
-
-        $this->validate($request, $rules);
-
-        $providers = ['users', 'retailer'];
-
-        if (!in_array($provider, $providers)) {
-            return response()->json(['errors' => ['main' => 'Wrong provider provided']], 422);
-        }
-
-        $selectedProvider = $this->getProvider($provider);
-        $model = $selectedProvider->where('email', '=', $request->input('email'))->first();
-
-        if (!$model) {
-            return response()->json(['errors' => ['main' => 'Wrong credentials']], 401);
-        }
-
-        if(!Hash::check($request->input('password'), $model->password)) {
-            return response()->json(['errors' => ['main' => 'Wrong credentials']], 401);
-        }
-
-        return 'o provider escolhido foi ' . $provider;
+        $this->repository = $repository;
     }
 
-    public function getProvider(string $provider)
+    public function postAuthenticate(Request $request, string $provider)
     {
-        $providers = [
-            'user' => User::class,
-            'retailer' => Retailer::class,
-        ];
+        $this->validate($request, [
+            'email' => 'required|email',
+            'password' => 'required|min:6'
+        ]);
 
-        if (array_key_exists($provider, $providers)) {
-            return new $providers[$provider]();
-        } else {
-            throw new Exception('Provider not found');
+        try {
+            $fields = $request->only(['email', 'password']);
+            $result = $this->repository->authenticate($provider, $fields);
+            return response()->json($result);
+        } catch (AuthenticationException $exception) {
+            return response()->json(['errors' => ['main' => $exception->getMessage()]], 401);
+        } catch(InvalidDataProviderException $exception) {
+            return response()->json(['errors' => ['main' => $exception->getMessage()]], 422);
         }
     }
 }
