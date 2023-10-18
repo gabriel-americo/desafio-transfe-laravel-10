@@ -33,6 +33,8 @@ class AuthController extends Controller
             return response()->json(['errors' => ['main' => $exception->getMessage()]], 401);
         } catch (InvalidDataProviderException $exception) {
             return response()->json(['errors' => ['main' => $exception->getMessage()]], 422);
+        } catch (\Exception $exception) {
+            return response()->json(['errors' => ['main' => $exception->getMessage()]], 123);
         }
     }
 }
