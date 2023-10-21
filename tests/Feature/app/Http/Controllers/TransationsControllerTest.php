@@ -2,8 +2,10 @@
 
 namespace Feature\app\Http\Controllers;
 
+use App\Events\SendNotification;
 use App\Models\Retailer;
 use App\Models\User;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class TransationsControllerTest extends TestCase
@@ -20,7 +22,7 @@ class TransationsControllerTest extends TestCase
 
         $payload =
             [
-                'provider' => 'user',
+                'provider' => 'users',
                 'payee_id' => 'whatever',
                 'amount' => 123
             ];
@@ -33,7 +35,7 @@ class TransationsControllerTest extends TestCase
         $request->assertStatus(404);
     }
 
-    /*public function testUserShouldNotSendWrongProvider()
+    public function testUserShouldNotSendWrongProvider()
     {
         $user = User::factory()->create();
 
@@ -47,12 +49,12 @@ class TransationsControllerTest extends TestCase
         $request = $this->actingAs($user, 'users')
             ->post(route('postTransaction'), $payload);
 
-            $request
+        $request
             ->assertStatus(422)
             ->assertJson([
                 'errors' => ['main' => 'Wrong provider provided']
             ]);
-    }*/
+    }
 
     public function testUserShouldBeAValidUserToTransfer()
     {
@@ -60,7 +62,7 @@ class TransationsControllerTest extends TestCase
 
         $payload =
             [
-                'provider' => 'user',
+                'provider' => 'users',
                 'payee_id' => 'whatever',
                 'amount' => 123
             ];
@@ -77,25 +79,25 @@ class TransationsControllerTest extends TestCase
 
         $payload =
             [
-                'provider' => 'user',
+                'provider' => 'users',
                 'payee_id' => 'whatever',
                 'amount' => 123
             ];
 
-        $request = $this->actingAs($user, 'retailer')
+        $request = $this->actingAs($user, 'retailers')
             ->post(route('postTransaction'), $payload);
 
         $request->assertStatus(401);
     }
 
-    public function testUserShouldHaveMoneyToPerformSomeTransaction ()
+    public function testUserShouldHaveMoneyToPerformSomeTransaction()
     {
         $userPayer = User::factory()->create();
         $userPayed = User::factory()->create();
 
         $payload =
             [
-                'provider' => 'user',
+                'provider' => 'users',
                 'payee_id' => $userPayed->id,
                 'amount' => 123
             ];
@@ -104,5 +106,37 @@ class TransationsControllerTest extends TestCase
             ->post(route('postTransaction'), $payload);
 
         $request->assertStatus(422);
+    }
+
+    public function testUserCanTransferMoney()
+    {
+        Event::fakeFor(function () {
+            $userPayer = User::factory()->create();
+            $userPayer->wallet->deposit(1000);
+            $userPayed = User::factory()->create();
+
+            $payload = [
+                'provider' => 'users',
+                'payee_id' => $userPayed->id,
+                'amount' => 100
+            ];
+
+            $request = $this->actingAs($userPayer, 'users')
+                ->post(route('postTransaction'), $payload);
+
+            $request->assertStatus(200);
+
+            $this->assertDatabaseHas('wallets', [
+                'id' => $userPayer->wallet->id,
+                'balance' => 1000,
+            ]);
+
+            $this->assertDatabaseHas('wallets', [
+                'id' => $userPayed->wallet->id,
+                'balance' => 0,
+            ]);
+
+            Event::assertDispatched(SendNotification::class);
+        });
     }
 }
